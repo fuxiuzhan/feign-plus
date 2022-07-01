@@ -9,7 +9,7 @@
         <version>1.0.0.WaterDrop</version>
     </parent>
     <groupId>com.fxz.rpc</groupId>
-    <artifactId>feignplus</artifactId>
+    <artifactId>feign-plus</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <modules>
