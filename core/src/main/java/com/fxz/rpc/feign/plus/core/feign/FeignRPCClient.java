@@ -32,13 +32,11 @@ public class FeignRPCClient implements Client {
     @Override
     public Response execute(Request request, Request.Options options) throws IOException {
         String url = request.url();
-        URI uri = URI.create(url);
-        String key = createKey(uri);
         String uuid = uuidKey();
         RemotingCommand requestCommand = transformRequestToRemotingCommand(request, url, uuid);
         RemotingCommand remotingCommand = null;
         try {
-            remotingCommand = remotingClient.invokeSync(key, requestCommand, REMOTING_RPC_TIMEOUT);
+            remotingCommand = remotingClient.invokeSync(request.requestTemplate().feignTarget().name(), requestCommand, REMOTING_RPC_TIMEOUT);
             return transformRemotingCommandToResponse(request, remotingCommand);
         } catch (RemotingSendRequestException e) {
             logger.error(e.toString());

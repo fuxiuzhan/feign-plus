@@ -28,10 +28,11 @@ public class NettyClientController implements CommandLineRunner {
     private DiscoveryClient discoveryClient;
     @Value("${spring.application.name}")
     private String serviceName;
-    @Value("${server.port}")
+    @Value("${server.port:8080}")
     private Integer port;
-    private static ScheduledExecutorService loopCheckThread = Executors.newSingleThreadScheduledExecutor();
 
+
+    private static ScheduledExecutorService loopCheckThread = Executors.newSingleThreadScheduledExecutor();
 
     @Override
     public void run(String... args) throws Exception {
@@ -58,8 +59,8 @@ public class NettyClientController implements CommandLineRunner {
                     if (null != instances) {
                         for (ServiceInstance instance : instances) {
                             String ip = instance.getHost();
-                            int port = instance.getPort() + FeignRPCConstant.STEP;
-                            keys.add(BaseUtils.createKeyWithIPAndPort(ip, port));
+                            int port = Integer.parseInt(instance.getMetadata().get(FeignRPCConstant.RPC_LISTEN_PORT));
+                            keys.add(BaseUtils.createKeyWithIPAndPort(service, ip, port));
                         }
                     }
                 }
@@ -67,9 +68,9 @@ public class NettyClientController implements CommandLineRunner {
 
             //1.创建最近启动的服务
             for (String key : keys) {
-                if (!client.channelActive(key)) {
-                    String[] ipAndPorts = key.split("_");
-                    client.connect(ipAndPorts[0], Integer.parseInt(ipAndPorts[1]));
+                String[] ipAndPorts = key.split("_");
+                if (!client.channelActive(ipAndPorts[0])) {
+                    client.connect(ipAndPorts[0], ipAndPorts[1], Integer.parseInt(ipAndPorts[2]));
                 }
             }
 

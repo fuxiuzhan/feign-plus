@@ -8,7 +8,7 @@ import com.fxz.rpc.feign.plus.core.remoting.protocol.RemotingCommand;
 
 public interface RemotingClient extends RemotingService {
 
-    RemotingCommand invokeSync(final String addr, final RemotingCommand command, final long timeoutMillis) throws InterruptedException, RemotingSendRequestException, RemotingTimeoutException, RemotingConnectException;
+    RemotingCommand invokeSync(final String serviceName, final RemotingCommand command, final long timeoutMillis) throws InterruptedException, RemotingSendRequestException, RemotingTimeoutException, RemotingConnectException;
 
     /**
      * 远程连接服务器
@@ -16,7 +16,7 @@ public interface RemotingClient extends RemotingService {
      * @param ip   服务器地址
      * @param port 服务器端口
      */
-    void connect(String ip, int port);
+    void connect(String serviceName,String ip, int port);
 
 
     /**

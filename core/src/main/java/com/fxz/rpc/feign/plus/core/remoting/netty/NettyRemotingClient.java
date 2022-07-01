@@ -28,12 +28,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class NettyRemotingClient extends AbstractNettyRemoting implements RemotingClient {
     private Timer timer = new Timer("clientHouseKeepingService", true);
     //存放唯一标示key（服务名称+"_"+端口号）和channel关系
-    private ConcurrentHashMap<String, Channel> channelTables = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, List<Channel>> channelTables = new ConcurrentHashMap<>();
     private Bootstrap bootstrap;
     private NioEventLoopGroup workGroup;
     private AtomicInteger workThreadIndex = new AtomicInteger(0);
@@ -41,36 +42,30 @@ public class NettyRemotingClient extends AbstractNettyRemoting implements Remoti
     private ThreadPoolExecutor poolExecutor;
 
     @Override
-    public RemotingCommand invokeSync(String addr, RemotingCommand command, long timeoutMillis) throws InterruptedException, RemotingSendRequestException, RemotingTimeoutException, RemotingConnectException {
-        Channel channel = getAndCheckChannel(addr);
+    public RemotingCommand invokeSync(String serviceName, RemotingCommand command, long timeoutMillis) throws InterruptedException, RemotingSendRequestException, RemotingTimeoutException, RemotingConnectException {
+        Channel channel = getAndCheckChannel(serviceName);
         if (channel == null) {
-            throw new RemotingConnectException(addr);
+            throw new RemotingConnectException(serviceName);
         }
         return invokeSyncImpl(channel, command, timeoutMillis);
     }
 
     @Override
     public boolean channelActive(String key) {
-        Channel channel = channelTables.get(key);
-        if (channel == null)
-            return false;
-        if (!channel.isActive())
-            return false;
-        return true;
+        List<Channel> channels = channelTables.get(key);
+        if (!CollectionUtils.isEmpty(channels)) {
+            return channels.stream().filter(c -> c.isActive()).findFirst().get() != null;
+        }
+        return false;
     }
 
     public void removeUnActiveChannel() {
-        List<String> keyList = new LinkedList<>();
-        for (Map.Entry<String, Channel> entry : channelTables.entrySet()) {
+        for (Map.Entry<String, List<Channel>> entry : channelTables.entrySet()) {
             String key = entry.getKey();
-            Channel value = entry.getValue();
-            if (!value.isActive()) {
-                keyList.add(key);
-            }
-        }
-
-        for (String key : keyList) {
-            channelTables.remove(key);
+            List<Channel> channels = entry.getValue();
+            List<Channel> unActives = channels.stream().filter(c -> !c.isActive()).collect(Collectors.toList());
+            channels.removeAll(unActives);
+            channelTables.put(key, channels);
         }
     }
 
@@ -130,10 +125,16 @@ public class NettyRemotingClient extends AbstractNettyRemoting implements Remoti
     }
 
     @Override
-    public void connect(String ip, int port) {
+    public void connect(String serviceName, String ip, int port) {
         bootstrap.connect(ip, port).addListener((ChannelFutureListener) future -> {
             if (future.isSuccess()) {
-                channelTables.put(ip + "_" + port, future.channel());
+                List<Channel> channels = new ArrayList<>();
+                if (channelTables.get(serviceName) != null) {
+                    channelTables.get(serviceName).add(future.channel());
+                } else {
+                    channels.add(future.channel());
+                    channelTables.put(serviceName, channels);
+                }
                 log.info("connect  to remoting server success, remoting address {}:{} ", ip, port);
                 return;
             }
@@ -149,21 +150,19 @@ public class NettyRemotingClient extends AbstractNettyRemoting implements Remoti
         }
         timer.cancel();
         if (!CollectionUtils.isEmpty(channelTables)) {
-            for (Channel channel : channelTables.values()) {
-                channel.close();
+            for (List<Channel> channels : channelTables.values()) {
+                channels.stream().forEach(c -> {
+                    c.close();
+                });
             }
         }
         channelTables.clear();
     }
 
 
-    private Channel getAndCheckChannel(String addr) {
-        Channel channel = channelTables.get(addr);
-        if (channel != null && !channel.isActive()) {
-            channelTables.remove(addr);
-            channel = null;
-        }
-        return channel;
+    private Channel getAndCheckChannel(String serviceName) {
+        List<Channel> channels = channelTables.get(serviceName);
+        return channels.stream().filter(c -> c.isActive()).findFirst().orElse(null);
     }
 
 
