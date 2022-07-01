@@ -1,0 +1,5 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.fxz.rpc.feign.plus.core.autoconfiguration.FeignRPCAutoConfiguration,\
+  com.fxz.rpc.feign.plus.core.autoconfiguration.DispatcherServletProxyAutoConfiguration
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  com.fxz.rpc.feign.plus.core.util.EnvironmentUtils
