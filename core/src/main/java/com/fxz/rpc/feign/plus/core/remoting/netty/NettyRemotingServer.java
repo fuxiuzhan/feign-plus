@@ -8,6 +8,8 @@ import com.fxz.rpc.feign.plus.core.mock.MockHttpServletRequest;
 import com.fxz.rpc.feign.plus.core.mock.MockHttpServletResponse;
 import com.fxz.rpc.feign.plus.core.proxy.DispatcherServletInherit;
 import com.fxz.rpc.feign.plus.core.remoting.RemotingServer;
+import com.fxz.rpc.feign.plus.core.remoting.protocol.BaseMessage;
+import com.fxz.rpc.feign.plus.core.remoting.protocol.Message2BytesCodec;
 import com.fxz.rpc.feign.plus.core.remoting.protocol.RemotingCommand;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -61,9 +63,7 @@ public class NettyRemotingServer extends AbstractNettyRemoting implements Remoti
                 .childHandler(new ChannelInitializer<NioSocketChannel>() {
                     @Override
                     protected void initChannel(NioSocketChannel ch) throws Exception {
-                        ch.pipeline().addLast(new LineBasedFrameDecoder(1024 * 100));
-                        ch.pipeline().addLast(new StringDecoder());
-                        ch.pipeline().addLast(new StringEncoder());
+                        ch.pipeline().addLast(new Message2BytesCodec());
                         ch.pipeline().addLast(new RemotingServerHandler());
                         ch.pipeline().addLast(new RemotingCommandHandle());
                     }
@@ -280,7 +280,7 @@ public class NettyRemotingServer extends AbstractNettyRemoting implements Remoti
     }
 
     @SuppressWarnings("all")
-    private class RemotingServerHandler extends SimpleChannelInboundHandler<String> {
+    private class RemotingServerHandler extends SimpleChannelInboundHandler<BaseMessage> {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -294,8 +294,8 @@ public class NettyRemotingServer extends AbstractNettyRemoting implements Remoti
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
-            RemotingCommand remotingCommand = JSON.parseObject(msg, RemotingCommand.class);
+        protected void channelRead0(ChannelHandlerContext ctx, BaseMessage baseMessage) throws Exception {
+            RemotingCommand remotingCommand = JSON.parseObject(new String(baseMessage.getBody()), RemotingCommand.class);
             processMessageReceived(ctx, remotingCommand);
         }
     }

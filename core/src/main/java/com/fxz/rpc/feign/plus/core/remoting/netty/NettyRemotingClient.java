@@ -8,6 +8,8 @@ import com.fxz.rpc.feign.plus.core.remoting.RemotingClient;
 import com.fxz.rpc.feign.plus.core.remoting.exception.RemotingConnectException;
 import com.fxz.rpc.feign.plus.core.remoting.exception.RemotingSendRequestException;
 import com.fxz.rpc.feign.plus.core.remoting.exception.RemotingTimeoutException;
+import com.fxz.rpc.feign.plus.core.remoting.protocol.BaseMessage;
+import com.fxz.rpc.feign.plus.core.remoting.protocol.Message2BytesCodec;
 import com.fxz.rpc.feign.plus.core.remoting.protocol.RemotingCommand;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -84,10 +86,7 @@ public class NettyRemotingClient extends AbstractNettyRemoting implements Remoti
                 .handler(new ChannelInitializer<NioSocketChannel>() {
                     @Override
                     protected void initChannel(NioSocketChannel ch) throws Exception {
-                        ch.pipeline().addLast(new LineBasedFrameDecoder(1024 * 100));
-                        ch.pipeline().addLast(new IdleStateHandler(0, 0, 30, TimeUnit.SECONDS));
-                        ch.pipeline().addLast(new StringDecoder());
-                        ch.pipeline().addLast(new StringEncoder());
+                        ch.pipeline().addLast(new Message2BytesCodec());
                         ch.pipeline().addLast(new RemotingClientHandler());
                         ch.pipeline().addLast(new RemotingCommandHandle());
                     }
@@ -154,7 +153,7 @@ public class NettyRemotingClient extends AbstractNettyRemoting implements Remoti
 
 
     @SuppressWarnings("all")
-    private class RemotingClientHandler extends SimpleChannelInboundHandler<String> {
+    private class RemotingClientHandler extends SimpleChannelInboundHandler<BaseMessage> {
 
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -176,9 +175,9 @@ public class NettyRemotingClient extends AbstractNettyRemoting implements Remoti
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+        protected void channelRead0(ChannelHandlerContext ctx, BaseMessage baseMessage) throws Exception {
             poolExecutor.execute(() -> {
-                RemotingCommand remotingCommand = JSON.parseObject(msg, RemotingCommand.class);
+                RemotingCommand remotingCommand = JSON.parseObject(new String(baseMessage.getBody()), RemotingCommand.class);
                 processMessageReceived(ctx, remotingCommand);
             });
         }
