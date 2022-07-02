@@ -18,6 +18,6 @@ public class TestController {
 
     @GetMapping("/find")
     public String userInfo(@RequestParam("userId") String userId) {
-        return userInfoFeign.findUserById(Arrays.asList(userId));
+        return userInfoFeign.findUserByIds(Arrays.asList(userId));
     }
 }

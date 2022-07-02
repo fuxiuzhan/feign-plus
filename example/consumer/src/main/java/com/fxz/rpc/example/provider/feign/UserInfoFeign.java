@@ -10,6 +10,6 @@ import java.util.List;
 @FeignClient(value = "rpcProvider")
 public interface UserInfoFeign {
 
-    @PostMapping(value = "/user/findUserById")
-    String findUserById(@RequestParam("ids") List<String> ids);
+    @PostMapping(value = "/user/findUserByIds")
+    String findUserByIds(@RequestParam("ids") List<String> ids);
 }

@@ -11,8 +11,8 @@ import java.util.List;
 @Slf4j
 public class UserController {
 
-    @PostMapping("/findUserById")
-    String findUserById(@RequestParam("ids") List<String> ids) {
+    @PostMapping("/findUserByIds")
+    String findUserByIds(@RequestParam("ids") List<String> ids) {
         log.info("request->{}", ids);
         return "userId->" + JSON.toJSONString(ids) + "  from provider";
     }
