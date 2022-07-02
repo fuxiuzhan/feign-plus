@@ -1,6 +1,8 @@
 package com.fxz.rpc.feign.plus.core.remoting.netty;
 
 import com.alibaba.fastjson.JSON;
+import com.fxz.fuled.common.utils.ThreadFactoryNamed;
+import com.fxz.fuled.dynamic.threadpool.ThreadPoolRegistry;
 import com.fxz.rpc.feign.plus.core.enu.HandleEnum;
 import com.fxz.rpc.feign.plus.core.remoting.RemotingClient;
 import com.fxz.rpc.feign.plus.core.remoting.exception.RemotingConnectException;
@@ -18,27 +20,22 @@ import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tomcat.util.threads.TaskQueue;
-import org.apache.tomcat.util.threads.ThreadPoolExecutor;
 import org.springframework.util.CollectionUtils;
 
 import javax.annotation.PreDestroy;
 import java.util.*;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Slf4j
 public class NettyRemotingClient extends AbstractNettyRemoting implements RemotingClient {
     private Timer timer = new Timer("clientHouseKeepingService", true);
-    //存放唯一标示key（服务名称+"_"+端口号）和channel关系
     private ConcurrentHashMap<String, List<Channel>> channelTables = new ConcurrentHashMap<>();
     private Bootstrap bootstrap;
     private NioEventLoopGroup workGroup;
-    private AtomicInteger workThreadIndex = new AtomicInteger(0);
-    private AtomicInteger clientHandleThreadIndex = new AtomicInteger(0);
     private ThreadPoolExecutor poolExecutor;
 
     @Override
@@ -76,20 +73,9 @@ public class NettyRemotingClient extends AbstractNettyRemoting implements Remoti
     @SuppressWarnings("all")
     @Override
     public void start() {
-        TaskQueue taskQueue = new TaskQueue(10000);
-        poolExecutor = new ThreadPoolExecutor(Runtime.getRuntime().availableProcessors(), Runtime.getRuntime().availableProcessors() * 2, 10, TimeUnit.SECONDS, taskQueue, new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r, "client_handle_thread_" + clientHandleThreadIndex.getAndIncrement());
-            }
-        });
-        taskQueue.setParent(poolExecutor);
-        workGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors() * 2, new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r, "netty_client_work_thread_" + workThreadIndex.getAndIncrement());
-            }
-        });
+        poolExecutor = new ThreadPoolExecutor(Runtime.getRuntime().availableProcessors(), Runtime.getRuntime().availableProcessors(), 10, TimeUnit.SECONDS, new ArrayBlockingQueue<>(1000), ThreadFactoryNamed.named("client_handle_thread"));
+        ThreadPoolRegistry.registerThreadPool("clientTaskQueueThreadPool", poolExecutor);
+        workGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors() * 2, ThreadFactoryNamed.named("netty_client_work_thread"));
         bootstrap = new Bootstrap();
         bootstrap.group(workGroup)
                 .channel(NioSocketChannel.class)
@@ -194,8 +180,6 @@ public class NettyRemotingClient extends AbstractNettyRemoting implements Remoti
                 RemotingCommand remotingCommand = JSON.parseObject(msg, RemotingCommand.class);
                 processMessageReceived(ctx, remotingCommand);
             });
-
-
         }
     }
 }

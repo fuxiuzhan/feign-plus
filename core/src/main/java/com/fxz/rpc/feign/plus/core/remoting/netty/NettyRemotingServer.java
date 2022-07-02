@@ -1,6 +1,8 @@
 package com.fxz.rpc.feign.plus.core.remoting.netty;
 
 import com.alibaba.fastjson.JSON;
+import com.fxz.fuled.common.utils.ThreadFactoryNamed;
+import com.fxz.fuled.dynamic.threadpool.ThreadPoolRegistry;
 import com.fxz.rpc.feign.plus.core.enu.HandleEnum;
 import com.fxz.rpc.feign.plus.core.mock.MockHttpServletRequest;
 import com.fxz.rpc.feign.plus.core.mock.MockHttpServletResponse;
@@ -17,8 +19,6 @@ import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tomcat.util.threads.TaskQueue;
-import org.apache.tomcat.util.threads.ThreadPoolExecutor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 
@@ -26,10 +26,10 @@ import javax.servlet.ServletException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.*;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 public class NettyRemotingServer extends AbstractNettyRemoting implements RemotingServer {
@@ -37,9 +37,7 @@ public class NettyRemotingServer extends AbstractNettyRemoting implements Remoti
     private volatile Channel serverChannel;
     private NioEventLoopGroup workGroup;
     private NioEventLoopGroup bossGroup;
-    private AtomicInteger workThreadIndex = new AtomicInteger(0);
     private ThreadPoolExecutor poolExecutor;
-    private AtomicInteger serverHandleThreadIndex = new AtomicInteger(0);
     private Timer timer = new Timer("response_future_timer", true);
     @Autowired
     private DispatcherServletInherit dispatcherServlet;
@@ -51,26 +49,10 @@ public class NettyRemotingServer extends AbstractNettyRemoting implements Remoti
     @SuppressWarnings("all")
     @Override
     public void start() {
-        TaskQueue queue = new TaskQueue(10000);
-        poolExecutor = new ThreadPoolExecutor(Runtime.getRuntime().availableProcessors(), Runtime.getRuntime().availableProcessors() * 10, 10, TimeUnit.SECONDS, queue, new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r, "rpc_server_handle_thread_" + serverHandleThreadIndex.getAndIncrement());
-            }
-        });
-        queue.setParent(poolExecutor);
-        workGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors() * 2, new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r, "netty_server_work_thread_" + workThreadIndex.getAndIncrement());
-            }
-        });
-        bossGroup = new NioEventLoopGroup(1, new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r, "netty_server_accept_thread");
-            }
-        });
+        poolExecutor = new ThreadPoolExecutor(Runtime.getRuntime().availableProcessors(), Runtime.getRuntime().availableProcessors(), 10, TimeUnit.SECONDS, new ArrayBlockingQueue<>(1000), ThreadFactoryNamed.named("server_handle_thread"));
+        ThreadPoolRegistry.registerThreadPool("serverTaskQueueThreadPool", poolExecutor);
+        workGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors() * 2, ThreadFactoryNamed.named("netty_server_work_thread_"));
+        bossGroup = new NioEventLoopGroup(1, ThreadFactoryNamed.named("netty_server_accept_thread"));
         bootstrap = new ServerBootstrap();
         bootstrap.group(bossGroup, workGroup)
                 .channel(NioServerSocketChannel.class)
@@ -128,17 +110,14 @@ public class NettyRemotingServer extends AbstractNettyRemoting implements Remoti
     @Override
     public void bind(int port) {
         try {
-            bootstrap.bind(port).sync().addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (future.isSuccess()) {
-                        serverChannel = future.channel();
-                        log.info("netty server bind port:{} success", port);
-                        return;
-                    }
-                    log.warn("netty server in port:{} fail,cause:{}", port, future.cause().getMessage());
-                    serverChannel = null;
+            bootstrap.bind(port).sync().addListener((ChannelFutureListener) future -> {
+                if (future.isSuccess()) {
+                    serverChannel = future.channel();
+                    log.info("netty server bind port:{} success", port);
+                    return;
                 }
+                log.warn("netty server in port:{} fail,cause:{}", port, future.cause().getMessage());
+                serverChannel = null;
             });
         } catch (InterruptedException e) {
             log.warn("netty server start fail,bind {} fail,cause:{}", port, e);
