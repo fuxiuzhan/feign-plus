@@ -10,6 +10,7 @@ import com.fxz.rpc.feign.plus.core.remoting.protocol.RemotingCommand;
 import feign.Client;
 import feign.Request;
 import feign.Response;
+import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,28 +30,15 @@ public class FeignRPCClient implements Client {
         this.remotingClient = client;
     }
 
+    @SneakyThrows
     @Override
-    public Response execute(Request request, Request.Options options) throws IOException {
+    public Response execute(Request request, Request.Options options) {
         String url = request.url();
         String uuid = uuidKey();
         RemotingCommand requestCommand = transformRequestToRemotingCommand(request, url, uuid);
         RemotingCommand remotingCommand = null;
-        try {
-            remotingCommand = remotingClient.invokeSync(request.requestTemplate().feignTarget().name(), requestCommand, REMOTING_RPC_TIMEOUT);
-            return transformRemotingCommandToResponse(request, remotingCommand);
-        } catch (RemotingSendRequestException e) {
-            logger.error(e.toString());
-            throw new RuntimeException("远程发送失败:" + e.toString());
-        } catch (RemotingTimeoutException e) {
-            logger.error(e.toString());
-            throw new RuntimeException("远程发送超时:" + e.toString());
-        } catch (RemotingConnectException e) {
-            logger.error(e.toString());
-            throw new RuntimeException("远程连接异常:" + e.toString());
-        } catch (Throwable throwable) {
-            logger.error(throwable.toString());
-            throw new RuntimeException(throwable.toString());
-        }
+        remotingCommand = remotingClient.invokeSync(request.requestTemplate().feignTarget().name(), requestCommand, REMOTING_RPC_TIMEOUT);
+        return transformRemotingCommandToResponse(request, remotingCommand);
     }
 
     /**

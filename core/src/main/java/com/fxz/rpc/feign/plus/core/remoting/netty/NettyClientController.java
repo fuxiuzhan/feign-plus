@@ -1,5 +1,6 @@
 package com.fxz.rpc.feign.plus.core.remoting.netty;
 
+import com.fxz.fuled.dynamic.threadpool.ThreadPoolRegistry;
 import com.fxz.rpc.feign.plus.core.constant.FeignRPCConstant;
 import com.fxz.rpc.feign.plus.core.util.BaseUtils;
 import com.fxz.rpc.feign.plus.core.util.BeanFactoryUtils;
@@ -11,14 +12,14 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.util.CollectionUtils;
 
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class NettyClientController implements CommandLineRunner {
@@ -28,17 +29,15 @@ public class NettyClientController implements CommandLineRunner {
     private DiscoveryClient discoveryClient;
     @Value("${spring.application.name}")
     private String serviceName;
-    @Value("${server.port:8080}")
-    private Integer port;
 
-
-    private static ScheduledExecutorService loopCheckThread = Executors.newSingleThreadScheduledExecutor();
+    private static ScheduledThreadPoolExecutor loopCheckThread = new ScheduledThreadPoolExecutor(1);
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         initNetty();
         initServerList();
         loopCheckAndLoadRemoteConnection();
+        ThreadPoolRegistry.registerThreadPool("loopCheckThread", loopCheckThread);
     }
 
     private void initNetty() {
@@ -48,11 +47,11 @@ public class NettyClientController implements CommandLineRunner {
     private void loopCheckAndLoadRemoteConnection() {
         loopCheckThread.scheduleWithFixedDelay(() -> {
             //1.获取并创建新的链接
-            List<String> services = discoveryClient.getServices();
+            List<String> services = serverCacheSet.stream().collect(Collectors.toList());
             List<String> keys = new LinkedList<>();
-            if (null != services) {
+            if (!CollectionUtils.isEmpty(services)) {
                 for (String service : services) {
-                    if (serviceName.equals(service) || !serverCacheSet.contains(service)) {
+                    if (serviceName.equals(service)) {
                         continue;
                     }
                     List<ServiceInstance> instances = discoveryClient.getInstances(service);
@@ -73,10 +72,8 @@ public class NettyClientController implements CommandLineRunner {
                     client.connect(ipAndPorts[0], ipAndPorts[1], Integer.parseInt(ipAndPorts[2]));
                 }
             }
-
             //2.踢去掉失效的链接
             client.removeUnActiveChannel();
-
         }, 0, 5, TimeUnit.SECONDS);
     }
 
