@@ -109,8 +109,7 @@ public abstract class AbstractNettyRemoting {
     protected class RemotingCommandHandle extends ChannelOutboundHandlerAdapter {
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-            ctx.writeAndFlush(JSON.toJSONString(msg));
+            ctx.writeAndFlush(JSON.toJSONString(msg) + "\r\n");
         }
-
     }
 }

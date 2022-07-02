@@ -15,6 +15,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.timeout.IdleStateEvent;
@@ -81,19 +82,16 @@ public class NettyRemotingClient extends AbstractNettyRemoting implements Remoti
                 .channel(NioSocketChannel.class)
                 .option(ChannelOption.SO_KEEPALIVE, true)
                 .option(ChannelOption.TCP_NODELAY, true)
-                .option(ChannelOption.SO_SNDBUF, 1024 * 1024 * 10)
-                .option(ChannelOption.SO_RCVBUF, 1024 * 1024 * 10)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000 * 10)
                 .handler(new ChannelInitializer<NioSocketChannel>() {
                     @Override
                     protected void initChannel(NioSocketChannel ch) throws Exception {
+                        ch.pipeline().addLast(new LineBasedFrameDecoder(1024 * 100));
                         ch.pipeline().addLast(new IdleStateHandler(0, 0, 30, TimeUnit.SECONDS));
-                        ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 8, 0, 8));
                         ch.pipeline().addLast(new StringDecoder());
+                        ch.pipeline().addLast(new StringEncoder());
                         ch.pipeline().addLast(new RemotingClientHandler());
                         ch.pipeline().addLast(new RemotingCommandHandle());
-                        ch.pipeline().addFirst(new StringEncoder());
-                        ch.pipeline().addFirst(new LengthFieldPrepender(8));
                     }
                 });
 

@@ -16,6 +16,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import lombok.extern.slf4j.Slf4j;
@@ -58,18 +59,15 @@ public class NettyRemotingServer extends AbstractNettyRemoting implements Remoti
                 .channel(NioServerSocketChannel.class)
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
                 .childOption(ChannelOption.TCP_NODELAY, true)
-                .childOption(ChannelOption.SO_RCVBUF, 1024 * 100 * 10)
-                .childOption(ChannelOption.SO_SNDBUF, 1024 * 100 * 10)
                 .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
                 .childHandler(new ChannelInitializer<NioSocketChannel>() {
                     @Override
                     protected void initChannel(NioSocketChannel ch) throws Exception {
-                        ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 8, 0, 8));
+                        ch.pipeline().addLast(new LineBasedFrameDecoder(1024 * 100));
                         ch.pipeline().addLast(new StringDecoder());
+                        ch.pipeline().addLast(new StringEncoder());
                         ch.pipeline().addLast(new RemotingServerHandler());
                         ch.pipeline().addLast(new RemotingCommandHandle());
-                        ch.pipeline().addFirst(new StringEncoder());
-                        ch.pipeline().addFirst(new LengthFieldPrepender(8));
                     }
                 });
         timer.scheduleAtFixedRate(new TimerTask() {
