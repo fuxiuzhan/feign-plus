@@ -13,6 +13,7 @@ import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -97,6 +98,9 @@ public class NettyClientController implements CommandLineRunner {
                     continue;
                 }
                 String value = annotation.value();
+                if (StringUtils.isEmpty(value)) {
+                    value = annotation.name();
+                }
                 serverCacheSet.add(value);
             }
         }
