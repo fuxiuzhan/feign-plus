@@ -145,7 +145,12 @@ public class NettyRemotingClient extends AbstractNettyRemoting implements Remoti
         channelTables.clear();
     }
 
-
+    /**
+     * 此处可以扩展loadbalancer
+     *
+     * @param serviceName
+     * @return
+     */
     private Channel getAndCheckChannel(String serviceName) {
         List<Channel> channels = channelTables.get(serviceName);
         return channels.stream().filter(c -> c.isActive()).findFirst().orElse(null);
