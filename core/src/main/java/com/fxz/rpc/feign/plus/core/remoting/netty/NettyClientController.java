@@ -6,12 +6,15 @@ import com.fxz.rpc.feign.plus.core.util.BaseUtils;
 import com.fxz.rpc.feign.plus.core.util.BeanFactoryUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.aop.support.AopUtils;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -23,7 +26,7 @@ import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class NettyClientController implements CommandLineRunner {
+public class NettyClientController implements CommandLineRunner, ApplicationContextAware {
     @Autowired
     private NettyRemotingClient client;
     @Autowired
@@ -38,7 +41,6 @@ public class NettyClientController implements CommandLineRunner {
         initNetty();
         initServerList();
         loopCheckAndLoadRemoteConnection();
-        ThreadPoolRegistry.registerThreadPool("loopCheckThread", loopCheckThread);
     }
 
     private void initNetty() {
@@ -106,4 +108,8 @@ public class NettyClientController implements CommandLineRunner {
         }
     }
 
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        ThreadPoolRegistry.registerThreadPool("loopCheckThread", loopCheckThread);
+    }
 }
