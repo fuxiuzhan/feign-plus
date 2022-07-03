@@ -3,9 +3,6 @@ package com.fxz.rpc.feign.plus.core.feign;
 import com.fxz.rpc.feign.plus.core.constant.FeignRPCConstant;
 import com.fxz.rpc.feign.plus.core.enu.HandleEnum;
 import com.fxz.rpc.feign.plus.core.remoting.RemotingClient;
-import com.fxz.rpc.feign.plus.core.remoting.exception.RemotingConnectException;
-import com.fxz.rpc.feign.plus.core.remoting.exception.RemotingSendRequestException;
-import com.fxz.rpc.feign.plus.core.remoting.exception.RemotingTimeoutException;
 import com.fxz.rpc.feign.plus.core.remoting.protocol.RemotingCommand;
 import feign.Client;
 import feign.Request;
@@ -14,7 +11,6 @@ import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.UUID;
 
