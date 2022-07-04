@@ -33,7 +33,7 @@ win电脑可在项目根目录创建data\appdatas\cat目录，将resources/clien
 mac电脑则需要创建/data/appdatas/cat目录（创建方法见：https://www.jianshu.com/p/c2972f5586c4），将resources/client.xml 复制到cat目录
 
 [!]
-也可以不创建，不过要需求项目启动类的注解：
+也可以不创建，不过要修改项目启动类的注解：
 将@EnableFuledBoot注解修改为：
 
 @SpringBootApplication(
