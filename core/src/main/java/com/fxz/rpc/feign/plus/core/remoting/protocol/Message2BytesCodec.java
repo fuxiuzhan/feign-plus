@@ -30,22 +30,22 @@ public class Message2BytesCodec extends ByteToMessageCodec<BaseMessage> {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        if (in.readableBytes() >= (1 + 1 + 1 + 4)) {// |HEADER1|HEADER2|VERSION|CHECKSUMLEN|CHECKSUM|TYPE|DATA_LENGTH|DATA
+        if (in.readableBytes() >= (1 + 1 + 1 + 4)) {// |HEADER1|HEADER2|VERSION|CHECKSUM|CHECKSUM|TYPE|DATA_LENGTH|DATA
             in.markReaderIndex();
             byte Header1 = in.readByte();
             byte Header2 = in.readByte();
             if (Header1 == BaseMessage.HEADER1 && Header2 == BaseMessage.HEADER2) {
                 BaseMessage baseMessage = new BaseMessage();
                 baseMessage.setVersion(in.readByte());
-                int checksumlen = in.readInt();
-                if (in.readableBytes() > checksumlen + 4) {
-                    byte[] checksum = new byte[checksumlen];
+                int checksumLen = in.readInt();
+                if (in.readableBytes() > checksumLen + 4) {
+                    byte[] checksum = new byte[checksumLen];
                     in.readBytes(checksum);
                     baseMessage.setChecksum(checksum);
                     baseMessage.setType(in.readByte());
-                    int bufferlen = in.readInt();
-                    if (in.readableBytes() >= bufferlen) {
-                        byte[] buffer = new byte[bufferlen];
+                    int bufferLen = in.readInt();
+                    if (in.readableBytes() >= bufferLen) {
+                        byte[] buffer = new byte[bufferLen];
                         in.readBytes(buffer);
                         baseMessage.setBody(buffer);
                         out.add(baseMessage);

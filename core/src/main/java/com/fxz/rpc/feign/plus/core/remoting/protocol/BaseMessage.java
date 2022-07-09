@@ -20,9 +20,9 @@ public class BaseMessage implements Serializable {
     public BaseMessage() {
     }
 
-    public BaseMessage(BaseMessage bmessage) {
-        this.setType(bmessage.getType());
-        this.setBody(bmessage.getBody());
-        this.setChecksum(bmessage.getChecksum());
+    public BaseMessage(BaseMessage baseMessage) {
+        this.setType(baseMessage.getType());
+        this.setBody(baseMessage.getBody());
+        this.setChecksum(baseMessage.getChecksum());
     }
 }
