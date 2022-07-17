@@ -3,7 +3,7 @@ package com.fxz.rpc.feign.plus.core.remoting.netty;
 import com.alibaba.fastjson.JSON;
 import com.fxz.fuled.common.utils.ThreadFactoryNamed;
 import com.fxz.fuled.dynamic.threadpool.ThreadPoolRegistry;
-import com.fxz.rpc.feign.plus.core.enu.HandleEnum;
+import com.fxz.rpc.feign.plus.core.enums.HandleEnum;
 import com.fxz.rpc.feign.plus.core.mock.MockHttpServletRequest;
 import com.fxz.rpc.feign.plus.core.mock.MockHttpServletResponse;
 import com.fxz.rpc.feign.plus.core.proxy.DispatcherServletInherit;

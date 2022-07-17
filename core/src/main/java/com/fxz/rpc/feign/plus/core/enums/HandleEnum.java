@@ -1,4 +1,4 @@
-package com.fxz.rpc.feign.plus.core.enu;
+package com.fxz.rpc.feign.plus.core.enums;
 
 public enum HandleEnum {
     REQUEST_COMMAND(1),

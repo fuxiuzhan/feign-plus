@@ -1,7 +1,7 @@
 package com.fxz.rpc.feign.plus.core.feign;
 
 import com.fxz.rpc.feign.plus.core.constant.FeignRPCConstant;
-import com.fxz.rpc.feign.plus.core.enu.HandleEnum;
+import com.fxz.rpc.feign.plus.core.enums.HandleEnum;
 import com.fxz.rpc.feign.plus.core.remoting.RemotingClient;
 import com.fxz.rpc.feign.plus.core.remoting.protocol.RemotingCommand;
 import feign.Client;
