@@ -25,6 +25,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,6 +35,8 @@ public class NettyRemotingClient extends AbstractNettyRemoting implements Remoti
     private Bootstrap bootstrap;
     private NioEventLoopGroup workGroup;
     private ThreadPoolExecutor poolExecutor;
+
+    private AtomicLong counter = new AtomicLong(0);
 
     @Override
     public RemotingCommand invokeSync(String serviceName, RemotingCommand command, long timeoutMillis) throws InterruptedException, RemotingSendRequestException, RemotingTimeoutException, RemotingConnectException {
@@ -144,7 +147,14 @@ public class NettyRemotingClient extends AbstractNettyRemoting implements Remoti
      */
     private Channel getAndCheckChannel(String serviceName) {
         List<Channel> channels = channelTables.get(serviceName);
-        return channels.stream().filter(c -> c.isActive()).findFirst().orElse(null);
+        if (!CollectionUtils.isEmpty(channels)) {
+            List<Channel> collect = channels.stream().filter(c -> c.isActive()).collect(Collectors.toList());
+            if (collect.size() > 0) {
+                //此处使用轮训
+                return collect.get((int) (counter.incrementAndGet() % collect.size()));
+            }
+        }
+        return null;
     }
 
 
